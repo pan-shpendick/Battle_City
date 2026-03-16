@@ -7,15 +7,15 @@ class Player:
         self.x = 0
         self.y = 0
         self.speed = 4
+        self.size = int(level.TILE * 0.75)
         self.direction = "up"
-        self.size = 32
 
     def spawn(self, field_x, field_y):
-        self.x = field_x + 10 * 32
-        self.y = field_y + 24 * 32
+        self.x = field_x + 6 * level.TILE
+        self.y = field_y + 15 * level.TILE
         self.direction = "up"
 
-    def draw(self, screen):
+    def get_image(self):
         if self.direction == "up":
             img = assets.player_tank_up_img
         elif self.direction == "right":
@@ -25,7 +25,10 @@ class Player:
         else:
             img = assets.player_tank_down_img
 
-        screen.blit(img, (self.x, self.y))
+        return pygame.transform.scale(img, (self.size, self.size))
+
+    def draw(self, screen):
+        screen.blit(self.get_image(), (self.x, self.y))
 
     def move(self, keys, field_x, field_y):
         new_x = self.x

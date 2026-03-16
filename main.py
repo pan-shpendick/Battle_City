@@ -49,6 +49,7 @@ while running:
         if time.get_ticks() - stage_start_time > 2000:
             config.game_state = "game"
 
+
     elif config.game_state == "game":
         field_x, field_y = level.draw_level(screen, WIDTH, HEIGHT)
 
@@ -65,12 +66,15 @@ while running:
             running = False
 
         if e.type == KEYDOWN:
+
             if config.game_state == "menu":
+
                 if config.settings_mode:
                     if e.key == K_ESCAPE:
                         config.settings_mode = False
                     else:
                         settings.input(e)
+
                 else:
                     if e.key == K_ESCAPE:
                         running = False
@@ -87,21 +91,30 @@ while running:
                             config.game_state = "stage_intro"
                             config.player_spawned = False
                             stage_start_time = time.get_ticks()
-
                         elif config.menu_selected == 1:
                             config.settings_mode = True
 
             elif config.game_state == "stage_intro":
                 if e.key == K_ESCAPE:
-                    config.game_state = "menu"
-                    config.settings_mode = False
-                    menu_offset = HEIGHT
+                    running = False
+
 
             elif config.game_state == "game":
                 if e.key == K_ESCAPE:
-                    config.game_state = "menu"
-                    config.settings_mode = False
-                    menu_offset = HEIGHT
+                    running = False
+
+                if not config.player_spawned:
+                    player1.spawn(field_x, field_y)
+
+                    if not level.can_move_to(player1.x, player1.y, player1.size, field_x, field_y):
+                        player1.x = field_x + 3 * level.TILE
+                        player1.y = field_y + 12 * level.TILE
+
+                    config.player_spawned = True
+
+                keys = key.get_pressed()
+                player1.move(keys, field_x, field_y)
+                player1.draw(screen)
 
     display.update()
     clock.tick(60)

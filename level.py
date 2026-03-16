@@ -1,46 +1,71 @@
 import pygame
 import assets
 
-TILE = 32
-FIELD_COLS = 26
-FIELD_ROWS = 26
+TILE = 50
+SIDEBAR_W = 110
+
+# # - кирпич
+# S - сталь
+# . - пусто
+level_map = [
+    "...................",
+    ".##.##.##.##.##.##.",
+    ".##.##.##.##.##.##.",
+    ".##.##.##.##.##.##.",
+    ".##.##.##.##.##.##.",
+    ".##.##.##.##.##.##.",
+    ".......##.##.......",
+    "S.####.......####.S",
+    ".......##.##.......",
+    ".##.##.#####.##.##.",
+    ".##.##.##.##.##.##.",
+    ".##.##.##.##.##.##.",
+    ".##.##.......##.##.",
+    ".##.##.#####.##.##.",
+    ".##.##.#...#.##.##.",
+    ".......#...#.......",
+]
+
+FIELD_ROWS = len(level_map)
+FIELD_COLS = len(level_map[0])
 
 FIELD_W = FIELD_COLS * TILE
 FIELD_H = FIELD_ROWS * TILE
-SIDEBAR_W = 160
 
 
-def brick_rect(screen, field_x, field_y, tx, ty, w, h):
-    for y in range(h):
-        for x in range(w):
-            screen.blit(
-                assets.brick_img,
-                (field_x + (tx + x) * TILE, field_y + (ty + y) * TILE)
-            )
+def scaled(img, w, h):
+    return pygame.transform.scale(img, (w, h))
 
 
-def steel_rect(screen, field_x, field_y, tx, ty, w, h):
-    for y in range(h):
-        for x in range(w):
-            screen.blit(
-                assets.steel_img,
-                (field_x + (tx + x) * TILE, field_y + (ty + y) * TILE)
-            )
+def get_game_area(screen_width, screen_height):
+    game_h = screen_height
+    game_w = int(game_h * 4 / 3)
+
+    if game_w > screen_width:
+        game_w = screen_width
+        game_h = int(game_w * 3 / 4)
+
+    game_x = (screen_width - game_w) // 2
+    game_y = (screen_height - game_h) // 2
+    return game_x, game_y, game_w, game_h
 
 
-def draw_sidebar(screen, panel_x, field_y, HEIGHT):
-    pygame.draw.rect(screen, (140, 140, 140), (panel_x, 0, SIDEBAR_W, HEIGHT))
+def draw_sidebar(screen, panel_x, game_y, game_h):
+    pygame.draw.rect(screen, (140, 140, 140), (panel_x, game_y, SIDEBAR_W, game_h))
 
-    # Иконки врагов справа
-    start_x = panel_x + 42
-    start_y = field_y + 36
+    enemy_icon = scaled(assets.enemy_icon_img, 28, 28)
+    player_icon = scaled(assets.player_icon_img, 34, 34)
+    flag_img = scaled(assets.flag_img, 42, 42)
 
-    for i in range(16):
+    start_x = panel_x + 18
+    start_y = game_y + 30
+
+    for i in range(18):
         col = i % 2
         row = i // 2
-        x = start_x + col * 34
-        y = start_y + row * 39
-        screen.blit(assets.enemy_icon_img, (x, y))
+        x = start_x + col * 30
+        y = start_y + row * 32
+        screen.blit(enemy_icon, (x, y))
 
     font_ui = pygame.font.SysFont("Courier New", 34, bold=True)
 
@@ -48,166 +73,95 @@ def draw_sidebar(screen, panel_x, field_y, HEIGHT):
     text_2 = font_ui.render("2", True, (0, 0, 0))
     text_1 = font_ui.render("1", True, (0, 0, 0))
 
-    screen.blit(text_ig, (panel_x + 55, field_y + 470))
-    screen.blit(assets.player_icon_img, (panel_x + 50, field_y + 515))
-    screen.blit(text_2, (panel_x + 96, field_y + 528))
+    screen.blit(text_ig, (panel_x + 18, game_y + 420))
+    screen.blit(player_icon, (panel_x + 18, game_y + 470))
+    screen.blit(text_2, (panel_x + 62, game_y + 480))
 
-    screen.blit(assets.flag_img, (panel_x + 48, field_y + 670))
-    screen.blit(text_1, (panel_x + 96, field_y + 748))
+    screen.blit(flag_img, (panel_x + 18, game_y + 650))
+    screen.blit(text_1, (panel_x + 62, game_y + 720))
+
+
+def draw_tiles(screen, field_x, field_y):
+    brick = scaled(assets.brick_img, TILE, TILE)
+    steel = scaled(assets.steel_img, TILE, TILE)
+
+    for row_index, row in enumerate(level_map):
+        for col_index, cell in enumerate(row):
+            x = field_x + col_index * TILE
+            y = field_y + row_index * TILE
+
+            if cell == "#":
+                screen.blit(brick, (x, y))
+            elif cell == "S":
+                screen.blit(steel, (x, y))
+
+
+def draw_eagle(screen, field_x, field_y):
+    eagle_size = TILE * 2
+    eagle = scaled(assets.eagle_img, eagle_size, eagle_size)
+
+    eagle_x = field_x + 8 * TILE + TILE // 2
+    eagle_y = field_y + 14 * TILE
+
+    screen.blit(eagle, (eagle_x, eagle_y))
+
+
+def eagle_rect(field_x, field_y):
+    return pygame.Rect(
+        field_x + 8 * TILE + TILE // 2,
+        field_y + 14 * TILE,
+        TILE * 2,
+        TILE * 2
+    )
 
 
 def draw_level(screen, WIDTH, HEIGHT):
-
-    FIELD_W = FIELD_COLS * TILE
-    FIELD_H = FIELD_ROWS * TILE
-    SIDEBAR_W = 160
+    game_x, game_y, game_w, game_h = get_game_area(WIDTH, HEIGHT)
 
     total_w = FIELD_W + SIDEBAR_W
-
-    field_x = (WIDTH - total_w) // 2
-    field_y = (HEIGHT - FIELD_H) // 2
-
+    field_x = game_x + (game_w - total_w) // 2
+    field_y = game_y + (game_h - FIELD_H) // 2
     panel_x = field_x + FIELD_W
-    border = 20
 
-    # Сначала чёрный фон
     screen.fill((0, 0, 0))
-
-    # Потом серая рамка вокруг карты
-    pygame.draw.rect(
-        screen,
-        (140, 140, 140),
-        (
-            field_x - border,
-            field_y - border,
-            FIELD_W + border * 2,
-            FIELD_H + border * 2
-        )
-    )
-
-    # Потом чёрное игровое поле
+    pygame.draw.rect(screen, (140, 140, 140), (game_x, game_y, game_w, game_h))
     pygame.draw.rect(screen, (0, 0, 0), (field_x, field_y, FIELD_W, FIELD_H))
 
-    # Правая панель
-    draw_sidebar(screen, panel_x, field_y, HEIGHT)
-
-    # ===== РИСУЕМ КАРТУ =====
-    brick_rect(screen, field_x, field_y, 2, 1, 3, 10)
-    brick_rect(screen, field_x, field_y, 7, 1, 3, 10)
-
-    brick_rect(screen, field_x, field_y, 12, 1, 3, 4)
-    brick_rect(screen, field_x, field_y, 12, 7, 3, 3)
-
-    brick_rect(screen, field_x, field_y, 17, 1, 3, 10)
-    brick_rect(screen, field_x, field_y, 22, 1, 3, 10)
-
-    brick_rect(screen, field_x, field_y, 11, 1, 1, 7)
-    brick_rect(screen, field_x, field_y, 15, 1, 1, 7)
-
-    steel_rect(screen, field_x, field_y, 13, 5, 2, 2)
-
-    brick_rect(screen, field_x, field_y, 11, 11, 3, 2)
-    brick_rect(screen, field_x, field_y, 15, 11, 3, 2)
-
-    brick_rect(screen, field_x, field_y, 4, 14, 4, 2)
-    brick_rect(screen, field_x, field_y, 18, 14, 4, 2)
-
-    steel_rect(screen, field_x, field_y, 0, 14, 2, 2)
-    steel_rect(screen, field_x, field_y, 25, 14, 2, 2)
-
-    brick_rect(screen, field_x, field_y, 2, 18, 3, 8)
-    brick_rect(screen, field_x, field_y, 7, 18, 3, 8)
-    brick_rect(screen, field_x, field_y, 18, 18, 3, 8)
-    brick_rect(screen, field_x, field_y, 22, 18, 3, 8)
-
-    brick_rect(screen, field_x, field_y, 11, 16, 2, 7)
-    brick_rect(screen, field_x, field_y, 15, 16, 2, 7)
-    brick_rect(screen, field_x, field_y, 12, 16, 3, 2)
-    brick_rect(screen, field_x, field_y, 12, 22, 3, 1)
-
-    # ===== ОРЁЛ =====
-    eagle_x = field_x + 13 * TILE - assets.eagle_img.get_width() // 2
-    eagle_y = field_y + 24 * TILE
-
-    screen.blit(assets.eagle_img, (eagle_x, eagle_y))
-
-    brick_rect(screen, field_x, field_y, 12, 23, 1, 2)
-    brick_rect(screen, field_x, field_y, 14, 23, 1, 2)
-    brick_rect(screen, field_x, field_y, 11, 25, 2, 1)
-    brick_rect(screen, field_x, field_y, 14, 25, 2, 1)
+    draw_sidebar(screen, panel_x, game_y, game_h)
+    draw_tiles(screen, field_x, field_y)
+    draw_eagle(screen, field_x, field_y)
 
     return field_x, field_y
 
 
-def get_collision_rects(field_x, field_y):
-    rects = []
-
-    def add_rect(tx, ty, w, h):
-        rects.append(
-            pygame.Rect(
-                field_x + tx * TILE,
-                field_y + ty * TILE,
-                w * TILE,
-                h * TILE
-            )
-        )
-
-    add_rect(2, 1, 3, 10)
-    add_rect(7, 1, 3, 10)
-
-    add_rect(12, 1, 3, 4)
-    add_rect(12, 7, 3, 3)
-
-    add_rect(17, 1, 3, 10)
-    add_rect(22, 1, 3, 10)
-
-    add_rect(11, 1, 1, 7)
-    add_rect(15, 1, 1, 7)
-
-    add_rect(13, 5, 2, 2)
-
-    add_rect(11, 11, 3, 2)
-    add_rect(15, 11, 3, 2)
-
-    add_rect(4, 14, 4, 2)
-    add_rect(18, 14, 4, 2)
-
-    add_rect(0, 14, 2, 2)
-    add_rect(25, 14, 2, 2)
-
-    add_rect(2, 18, 3, 8)
-    add_rect(7, 18, 3, 8)
-    add_rect(18, 18, 3, 8)
-    add_rect(22, 18, 3, 8)
-
-    add_rect(11, 16, 2, 7)
-    add_rect(15, 16, 2, 7)
-    add_rect(12, 16, 3, 2)
-    add_rect(12, 22, 3, 1)
-
-    add_rect(12, 23, 1, 2)
-    add_rect(14, 23, 1, 2)
-    add_rect(11, 25, 2, 1)
-    add_rect(14, 25, 2, 1)
-
-    return rects
+def is_blocking(cell):
+    return cell in ("#", "S")
 
 
 def can_move_to(px, py, size, field_x, field_y):
+    if px < field_x:
+        return False
+    if py < field_y:
+        return False
+    if px + size > field_x + FIELD_W:
+        return False
+    if py + size > field_y + FIELD_H:
+        return False
+
+    left_col = (px - field_x) // TILE
+    right_col = (px - field_x + size - 1) // TILE
+    top_row = (py - field_y) // TILE
+    bottom_row = (py - field_y + size - 1) // TILE
+
+    for row in range(top_row, bottom_row + 1):
+        for col in range(left_col, right_col + 1):
+            if 0 <= row < len(level_map) and 0 <= col < len(level_map[row]):
+                if is_blocking(level_map[row][col]):
+                    return False
+
     tank_rect = pygame.Rect(px, py, size, size)
 
-    # границы поля
-    if tank_rect.left < field_x:
+    if tank_rect.colliderect(eagle_rect(field_x, field_y)):
         return False
-    if tank_rect.top < field_y:
-        return False
-    if tank_rect.right > field_x + FIELD_W:
-        return False
-    if tank_rect.bottom > field_y + FIELD_H:
-        return False
-
-    for rect in get_collision_rects(field_x, field_y):
-        if tank_rect.colliderect(rect):
-            return False
 
     return True
