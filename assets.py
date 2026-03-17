@@ -18,6 +18,7 @@ eagle_img = None
 enemy_icon_img = None
 player_icon_img = None
 flag_img = None
+bullet_img = None
 
 
 def load():
@@ -33,6 +34,12 @@ def load():
     global enemy_icon_img
     global player_icon_img
     global flag_img
+    global bullet_img
+
+    bullet_img = pygame.image.load(
+        os.path.join(IMAGE_DIR, "bullet.png")
+    ).convert_alpha()
+    bullet_img = pygame.transform.scale(bullet_img, (12, 12))
 
     title_img = pygame.image.load(
         os.path.join(IMAGE_DIR, "brick_title.png")

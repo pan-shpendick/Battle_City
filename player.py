@@ -1,6 +1,8 @@
 import pygame
 import assets
 import level
+from bullet import Bullet
+
 
 class Player:
     def __init__(self):
@@ -9,11 +11,17 @@ class Player:
         self.speed = 4
         self.size = int(level.TILE * 0.75)
         self.direction = "up"
+        self.bullet = None
+
+        self.shot_cooldown = 500
+        self.last_shot_time = 0
 
     def spawn(self, field_x, field_y):
         self.x = field_x + 6 * level.TILE
         self.y = field_y + 15 * level.TILE
         self.direction = "up"
+        self.bullet = None
+        self.last_shot_time = 0
 
     def get_image(self):
         if self.direction == "up":
@@ -29,6 +37,9 @@ class Player:
 
     def draw(self, screen):
         screen.blit(self.get_image(), (self.x, self.y))
+
+        if self.bullet and self.bullet.is_alive:
+            self.bullet.draw(screen)
 
     def move(self, keys, field_x, field_y):
         new_x = self.x
@@ -50,3 +61,35 @@ class Player:
         if level.can_move_to(new_x, new_y, self.size, field_x, field_y):
             self.x = new_x
             self.y = new_y
+
+    def shoot(self):
+        now = pygame.time.get_ticks()
+
+        if now - self.last_shot_time < self.shot_cooldown:
+            return
+
+        if self.bullet and self.bullet.is_alive:
+            return
+
+        bullet_x = self.x
+        bullet_y = self.y
+
+        if self.direction == "up":
+            bullet_x = self.x + self.size // 2 - 6
+            bullet_y = self.y - 12
+        elif self.direction == "down":
+            bullet_x = self.x + self.size // 2 - 6
+            bullet_y = self.y + self.size
+        elif self.direction == "left":
+            bullet_x = self.x - 12
+            bullet_y = self.y + self.size // 2 - 6
+        elif self.direction == "right":
+            bullet_x = self.x + self.size
+            bullet_y = self.y + self.size // 2 - 6
+
+        self.bullet = Bullet(bullet_x, bullet_y, self.direction)
+        self.last_shot_time = now
+
+    def update_bullet(self, field_x, field_y):
+        if self.bullet and self.bullet.is_alive:
+            self.bullet.move(field_x, field_y)

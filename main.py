@@ -50,6 +50,7 @@ while running:
             config.game_state = "game"
 
 
+
     elif config.game_state == "game":
         field_x, field_y = level.draw_level(screen, WIDTH, HEIGHT)
 
@@ -59,6 +60,9 @@ while running:
 
         keys = key.get_pressed()
         player1.move(keys, field_x, field_y)
+
+        # ПУЛЯ ОБНОВЛЯЕТСЯ КАЖДЫЙ КАДР
+        player1.update_bullet(field_x, field_y)
         player1.draw(screen)
 
     for e in event.get():
@@ -99,9 +103,15 @@ while running:
                     running = False
 
 
+
+
             elif config.game_state == "game":
                 if e.key == K_ESCAPE:
                     running = False
+
+                if e.key == K_SPACE:
+                    player1.shoot()
+
 
                 if not config.player_spawned:
                     player1.spawn(field_x, field_y)
@@ -112,9 +122,7 @@ while running:
 
                     config.player_spawned = True
 
-                keys = key.get_pressed()
-                player1.move(keys, field_x, field_y)
-                player1.draw(screen)
+
 
     display.update()
     clock.tick(60)
