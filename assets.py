@@ -19,6 +19,12 @@ enemy_icon_img = None
 player_icon_img = None
 flag_img = None
 bullet_img = None
+final_end_img = None
+
+enemy_tank_up_img = None
+enemy_tank_right_img = None
+enemy_tank_left_img = None
+enemy_tank_down_img = None
 
 
 def load():
@@ -35,6 +41,25 @@ def load():
     global player_icon_img
     global flag_img
     global bullet_img
+    global final_end_img
+    global enemy_tank_up_img
+    global enemy_tank_right_img
+    global enemy_tank_left_img
+    global enemy_tank_down_img
+
+    base_enemy_tank = pygame.image.load(
+        os.path.join(IMAGE_DIR, "enemy_tank.png")
+    ).convert_alpha()
+    base_enemy_tank = pygame.transform.scale(base_enemy_tank, (32, 32))
+
+    enemy_tank_up_img = base_enemy_tank
+    enemy_tank_right_img = pygame.transform.rotate(base_enemy_tank, -90)
+    enemy_tank_left_img = pygame.transform.rotate(base_enemy_tank, 90)
+    enemy_tank_down_img = pygame.transform.rotate(base_enemy_tank, 180)
+
+    final_end_img = pygame.image.load(
+        os.path.join(IMAGE_DIR, "final_end.png")
+    ).convert_alpha()
 
     bullet_img = pygame.image.load(
         os.path.join(IMAGE_DIR, "bullet.png")

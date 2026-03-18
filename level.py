@@ -32,6 +32,22 @@ FIELD_COLS = len(level_map[0])
 FIELD_W = FIELD_COLS * TILE
 FIELD_H = FIELD_ROWS * TILE
 
+# здоровье блоков
+brick_health = {}
+steel_health = {}
+
+
+def init_level():
+    brick_health.clear()
+    steel_health.clear()
+
+    for row_index, row in enumerate(level_map):
+        for col_index, cell in enumerate(row):
+            if cell == "#":
+                brick_health[(col_index, row_index)] = 2
+            elif cell == "S":
+                steel_health[(col_index, row_index)] = 4
+
 
 def scaled(img, w, h):
     return pygame.transform.scale(img, (w, h))
@@ -85,31 +101,39 @@ def draw_tiles(screen, field_x, field_y):
     brick = scaled(assets.brick_img, TILE, TILE)
     steel = scaled(assets.steel_img, TILE, TILE)
 
-    for row_index, row in enumerate(level_map):
-        for col_index, cell in enumerate(row):
+    for (col_index, row_index), hp in brick_health.items():
+        if hp > 0:
             x = field_x + col_index * TILE
             y = field_y + row_index * TILE
+            screen.blit(brick, (x, y))
 
-            if cell == "#":
-                screen.blit(brick, (x, y))
-            elif cell == "S":
-                screen.blit(steel, (x, y))
+    for (col_index, row_index), hp in steel_health.items():
+        if hp > 0:
+            x = field_x + col_index * TILE
+            y = field_y + row_index * TILE
+            screen.blit(steel, (x, y))
 
 
 def draw_eagle(screen, field_x, field_y):
     eagle_size = TILE * 2
     eagle = scaled(assets.eagle_img, eagle_size, eagle_size)
 
-    eagle_x = field_x + 8 * TILE + TILE // 2
-    eagle_y = field_y + 14 * TILE
+    offset_x = 75
+    offset_y = 0
+
+    eagle_x = field_x + 7 * TILE + offset_x
+    eagle_y = field_y + 14 * TILE + offset_y
 
     screen.blit(eagle, (eagle_x, eagle_y))
 
 
 def eagle_rect(field_x, field_y):
+    offset_x = 75
+    offset_y = 0
+
     return pygame.Rect(
-        field_x + 8 * TILE + TILE // 2,
-        field_y + 14 * TILE,
+        field_x + 7 * TILE + offset_x,
+        field_y + 14 * TILE + offset_y,
         TILE * 2,
         TILE * 2
     )
@@ -134,6 +158,14 @@ def draw_level(screen, WIDTH, HEIGHT):
     return field_x, field_y
 
 
+def is_blocking_cell(col, row):
+    if brick_health.get((col, row), 0) > 0:
+        return True
+    if steel_health.get((col, row), 0) > 0:
+        return True
+    return False
+
+
 def is_blocking(cell):
     return cell in ("#", "S")
 
@@ -155,9 +187,8 @@ def can_move_to(px, py, size, field_x, field_y):
 
     for row in range(top_row, bottom_row + 1):
         for col in range(left_col, right_col + 1):
-            if 0 <= row < len(level_map) and 0 <= col < len(level_map[row]):
-                if is_blocking(level_map[row][col]):
-                    return False
+            if is_blocking_cell(col, row):
+                return False
 
     tank_rect = pygame.Rect(px, py, size, size)
 
@@ -165,3 +196,22 @@ def can_move_to(px, py, size, field_x, field_y):
         return False
 
     return True
+
+
+def hit_block_at_pixel(px, py, bullet_w, bullet_h, field_x, field_y):
+    left_col = (px - field_x) // TILE
+    right_col = (px + bullet_w - 1 - field_x) // TILE
+    top_row = (py - field_y) // TILE
+    bottom_row = (py + bullet_h - 1 - field_y) // TILE
+
+    for row in range(top_row, bottom_row + 1):
+        for col in range(left_col, right_col + 1):
+            if brick_health.get((col, row), 0) > 0:
+                brick_health[(col, row)] -= 1
+                return True, col, row
+
+            if steel_health.get((col, row), 0) > 0:
+                steel_health[(col, row)] -= 1
+                return True, col, row
+
+    return False, None, None

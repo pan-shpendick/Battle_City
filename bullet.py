@@ -8,7 +8,7 @@ class Bullet:
         self.x = x
         self.y = y
         self.direction = direction
-        self.speed = 8
+        self.speed = 6
         self.width = 12
         self.height = 12
         self.is_alive = True
@@ -26,35 +26,30 @@ class Bullet:
         elif self.direction == "right":
             self.x += self.speed
 
-        # выход за границы поля
         if self.x < field_x or self.y < field_y:
             self.is_alive = False
-            return
+            return False, None, None
 
         if self.x + self.width > field_x + level.FIELD_W:
             self.is_alive = False
-            return
+            return False, None, None
 
         if self.y + self.height > field_y + level.FIELD_H:
             self.is_alive = False
-            return
+            return False, None, None
 
-        # столкновение со стенами
-        left_col = (self.x - field_x) // level.TILE
-        right_col = (self.x + self.width - 1 - field_x) // level.TILE
-        top_row = (self.y - field_y) // level.TILE
-        bottom_row = (self.y + self.height - 1 - field_y) // level.TILE
+        hit, col, row = level.hit_block_at_pixel(
+            self.x, self.y, self.width, self.height, field_x, field_y
+        )
+        if hit:
+            self.is_alive = False
+            return True, col, row
 
-        for row in range(top_row, bottom_row + 1):
-            for col in range(left_col, right_col + 1):
-                if 0 <= row < len(level.level_map) and 0 <= col < len(level.level_map[row]):
-                    if level.level_map[row][col] in ("#", "S"):
-                        self.is_alive = False
-                        return
-
-        # столкновение с орлом
         if self.get_rect().colliderect(level.eagle_rect(field_x, field_y)):
             self.is_alive = False
+            return "eagle", None, None
+
+        return False, None, None
 
     def get_image(self):
         img = pygame.transform.scale(assets.bullet_img, (self.width, self.height))
