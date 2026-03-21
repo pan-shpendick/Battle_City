@@ -1,21 +1,40 @@
 import pygame
+import assets
 
 
 class HitEffect:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.life = 12
-        self.max_life = 12
+
+        self.frames = [
+            pygame.transform.scale(assets.hit_frames[0], (24, 24)),
+            pygame.transform.scale(assets.hit_frames[1], (32, 32)),
+            pygame.transform.scale(assets.hit_frames[2], (40, 40)),
+        ]
+
+        self.frame_index = 0
+        self.last_update = pygame.time.get_ticks()
+        self.frame_delay = 40
+        self.alive = True
 
     def update(self):
-        self.life -= 1
+        now = pygame.time.get_ticks()
 
-    def is_alive(self):
-        return self.life > 0
+        if now - self.last_update > self.frame_delay:
+            self.frame_index += 1
+            self.last_update = now
+
+            if self.frame_index >= len(self.frames):
+                self.alive = False
 
     def draw(self, screen):
-        radius = max(2, self.life * 2)
+        if self.alive:
+            img = self.frames[self.frame_index]
+            screen.blit(
+                img,
+                (self.x - img.get_width() // 2, self.y - img.get_height() // 2)
+            )
 
-        pygame.draw.circle(screen, (255, 220, 120), (self.x, self.y), radius, 2)
-        pygame.draw.circle(screen, (255, 255, 255), (self.x, self.y), max(1, radius // 2), 1)
+    def is_alive(self):
+        return self.alive

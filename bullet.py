@@ -17,6 +17,9 @@ class Bullet:
         return pygame.Rect(self.x, self.y, self.width, self.height)
 
     def move(self, field_x, field_y):
+        if not self.is_alive:
+            return None
+
         if self.direction == "up":
             self.y -= self.speed
         elif self.direction == "down":
@@ -28,28 +31,28 @@ class Bullet:
 
         if self.x < field_x or self.y < field_y:
             self.is_alive = False
-            return False, None, None
+            return "wall"
 
         if self.x + self.width > field_x + level.FIELD_W:
             self.is_alive = False
-            return False, None, None
+            return "wall"
 
         if self.y + self.height > field_y + level.FIELD_H:
             self.is_alive = False
-            return False, None, None
+            return "wall"
 
-        hit, col, row = level.hit_block_at_pixel(
+        hit, _, _ = level.hit_block_at_pixel(
             self.x, self.y, self.width, self.height, field_x, field_y
         )
         if hit:
             self.is_alive = False
-            return True, col, row
+            return "block"
 
         if self.get_rect().colliderect(level.eagle_rect(field_x, field_y)):
             self.is_alive = False
-            return "eagle", None, None
+            return "eagle"
 
-        return False, None, None
+        return None
 
     def get_image(self):
         img = pygame.transform.scale(assets.bullet_img, (self.width, self.height))

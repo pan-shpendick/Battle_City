@@ -1,5 +1,6 @@
 import pygame
 import assets
+import config
 
 TILE = 50
 SIDEBAR_W = 110
@@ -76,7 +77,7 @@ def draw_sidebar(screen, panel_x, game_y, game_h):
     start_x = panel_x + 18
     start_y = game_y + 30
 
-    for i in range(18):
+    for i in range(config.enemy_remaining_count):
         col = i % 2
         row = i // 2
         x = start_x + col * 30
@@ -86,12 +87,12 @@ def draw_sidebar(screen, panel_x, game_y, game_h):
     font_ui = pygame.font.SysFont("Courier New", 34, bold=True)
 
     text_ig = font_ui.render("ІГ", True, (0, 0, 0))
-    text_2 = font_ui.render("2", True, (0, 0, 0))
+    lives_text = font_ui.render(str(config.player_lives), True, (0, 0, 0))
     text_1 = font_ui.render("1", True, (0, 0, 0))
 
     screen.blit(text_ig, (panel_x + 18, game_y + 420))
     screen.blit(player_icon, (panel_x + 18, game_y + 470))
-    screen.blit(text_2, (panel_x + 62, game_y + 480))
+    screen.blit(lives_text, (panel_x + 62, game_y + 480))
 
     screen.blit(flag_img, (panel_x + 18, game_y + 650))
     screen.blit(text_1, (panel_x + 62, game_y + 720))

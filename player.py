@@ -1,6 +1,7 @@
 import pygame
 import assets
 import level
+import config
 from bullet import Bullet
 from effects import HitEffect
 
@@ -9,27 +10,55 @@ class Player:
     def __init__(self):
         self.x = 0
         self.y = 0
+        self.spawn_x = 0
+        self.spawn_y = 0
+
         self.speed = 4
         self.size = int(level.TILE * 0.75)
         self.direction = "up"
+
         self.bullet = None
         self.effects = []
-        self.is_alive = True
 
         self.shot_cooldown = 500
         self.last_shot_time = 0
+
+        self.is_alive = True
 
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.size, self.size)
 
     def spawn(self, field_x, field_y):
-        self.x = field_x + 6 * level.TILE
-        self.y = field_y + 15 * level.TILE
+        self.spawn_x = field_x + 6 * level.TILE
+        self.spawn_y = field_y + 15 * level.TILE
+
+        self.x = self.spawn_x
+        self.y = self.spawn_y
         self.direction = "up"
+
         self.bullet = None
         self.effects = []
         self.last_shot_time = 0
         self.is_alive = True
+
+    def respawn(self):
+        self.x = self.spawn_x
+        self.y = self.spawn_y
+        self.direction = "up"
+        self.bullet = None
+        self.is_alive = True
+
+    def die(self):
+        if config.player_lives > 0:
+            config.player_lives -= 1
+            assets.died_sound.play()
+
+        if config.player_lives > 0:
+            self.respawn()
+            return "respawn"
+
+        self.is_alive = False
+        return "game_over"
 
     def get_image(self):
         if self.direction == "up":
@@ -86,7 +115,7 @@ class Player:
         if now - self.last_shot_time < self.shot_cooldown:
             return
 
-        if self.bullet and self.bullet.is_alive:
+        if self.bullet is not None and self.bullet.is_alive:
             return
 
         bullet_x = self.x
@@ -106,30 +135,51 @@ class Player:
             bullet_y = self.y + self.size // 2 - 6
 
         self.bullet = Bullet(bullet_x, bullet_y, self.direction)
+        assets.shot_sound.play()
         self.last_shot_time = now
 
     def update_bullet(self, field_x, field_y, enemies):
-        if self.bullet and self.bullet.is_alive:
-            hit, _, _ = self.bullet.move(field_x, field_y)
+        if self.bullet is not None and self.bullet.is_alive:
+            result = self.bullet.move(field_x, field_y)
 
-            if hit:
+            if result in ("block", "wall", "eagle"):
+                if result == "block":
+                    assets.concrete_sound.play()
                 effect_x = self.bullet.x + self.bullet.width // 2
                 effect_y = self.bullet.y + self.bullet.height // 2
                 self.effects.append(HitEffect(effect_x, effect_y))
 
-                if hit == "eagle":
+                if result == "eagle":
+                    assets.died_sound.play()
                     return "game_over"
 
-            if self.bullet and self.bullet.is_alive:
+            if self.bullet is not None and self.bullet.is_alive:
                 bullet_rect = self.bullet.get_rect()
+
                 for bot in enemies:
                     if bot.is_alive and bullet_rect.colliderect(bot.get_rect()):
                         bot.is_alive = False
                         self.bullet.is_alive = False
+                        assets.enemy_death_sound.play()
+
                         effect_x = bot.x + bot.size // 2
                         effect_y = bot.y + bot.size // 2
                         self.effects.append(HitEffect(effect_x, effect_y))
+
+                        if bot.fast:
+                            config.killed_fast += 1
+                            config.player_score += 200
+                        else:
+                            config.killed_normal += 1
+                            config.player_score += 100
+
+                        if config.enemy_remaining_count > 0:
+                            config.enemy_remaining_count -= 1
+
                         break
+
+        if self.bullet is not None and not self.bullet.is_alive:
+            self.bullet = None
 
         new_effects = []
         for effect in self.effects:

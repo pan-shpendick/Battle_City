@@ -11,6 +11,7 @@ import player
 import enemy
 
 init()
+mixer.init()
 
 screen = display.set_mode((0, 0), FULLSCREEN)
 clock = time.Clock()
@@ -34,16 +35,21 @@ running = True
 
 
 def spawn_enemy(field_x, field_y, enemies, player1):
-    spawn_points = [
-        (field_x + 1 * level.TILE, field_y + 1 * level.TILE),
-        (field_x + 8 * level.TILE, field_y + 1 * level.TILE),
-        (field_x + 15 * level.TILE, field_y + 1 * level.TILE),
-    ]
+    possible_spawns = []
+    top_row = 0
 
-    random.shuffle(spawn_points)
+    for col in range(level.FIELD_COLS):
+        if level.level_map[top_row][col] == ".":
+            x = field_x + col * level.TILE
+            y = field_y
+            possible_spawns.append((x, y))
 
-    for x, y in spawn_points:
-        temp_enemy = enemy.Enemy(x, y)
+    random.shuffle(possible_spawns)
+
+    is_fast = config.enemy_spawned_count >= config.enemy_max_count - 2
+
+    for x, y in possible_spawns:
+        temp_enemy = enemy.Enemy(x, y, fast=is_fast)
         enemy_rect = temp_enemy.get_rect()
 
         if not level.can_move_to(x, y, temp_enemy.size, field_x, field_y):
@@ -88,6 +94,10 @@ while running:
             config.game_state = "game"
 
     elif config.game_state == "game":
+        if not config.start_sound_played:
+            assets.start_sound.play()
+            config.start_sound_played = True
+
         field_x, field_y = level.draw_level(screen, WIDTH, HEIGHT)
 
         if not config.player_spawned:
@@ -97,17 +107,17 @@ while running:
             config.enemy_spawned_count = 0
             config.enemy_spawn_time = time.get_ticks()
 
-        # постепенный спавн
         now = time.get_ticks()
         alive_enemies = [bot for bot in enemies if bot.is_alive]
 
         if config.enemy_spawned_count < config.enemy_max_count:
-            if now - config.enemy_spawn_time > 2000:
-                spawned = spawn_enemy(field_x, field_y, alive_enemies, player1)
-                if spawned:
-                    enemies = alive_enemies
-                    config.enemy_spawned_count += 1
-                    config.enemy_spawn_time = now
+            if len(alive_enemies) < config.enemy_alive_limit:
+                if now - config.enemy_spawn_time > 2000:
+                    spawned = spawn_enemy(field_x, field_y, alive_enemies, player1)
+                    if spawned:
+                        enemies = alive_enemies
+                        config.enemy_spawned_count += 1
+                        config.enemy_spawn_time = now
 
         keys = key.get_pressed()
         player1.move(keys, field_x, field_y)
@@ -134,16 +144,33 @@ while running:
             enemy_result = bot.update(field_x, field_y, other_rects, player1.get_rect())
             bot.draw(screen)
 
-            if enemy_result == "game_over" or enemy_result == "player_dead":
-                player1.is_alive = False
+            if enemy_result == "game_over":
                 config.game_over = True
                 config.game_state = "game_over_scroll"
                 config.game_over_start_time = time.get_ticks()
+
+            elif enemy_result == "player_dead":
+                result = player1.die()
+
+                if result == "game_over":
+                    config.game_over = True
+                    config.game_state = "game_over_scroll"
+                    config.game_over_start_time = time.get_ticks()
 
             if bot.is_alive:
                 updated_enemies.append(bot)
 
         enemies = updated_enemies
+
+        if config.enemy_remaining_count == 0 and len(enemies) == 0 and config.enemy_spawned_count == config.enemy_max_count:
+            config.reset_stats()
+            config.game_state = "menu"
+            config.settings_mode = False
+            config.player_spawned = False
+            config.game_over = False
+            config.start_sound_played = False
+            config.defeat_sound_played = False
+            menu_offset = HEIGHT
 
     elif config.game_state == "game_over_scroll":
         field_x, field_y = level.draw_level(screen, WIDTH, HEIGHT)
@@ -182,33 +209,47 @@ while running:
         stage_num = big_font.render("1", True, (255, 255, 255))
         player_title = big_font.render("1 ГРАВЕЦЬ", True, (255, 80, 40))
 
+        total_score_text = big_font.render(str(config.player_score), True, (255, 180, 80))
+
         screen.blit(title_red, (WIDTH // 2 - 180, 60))
         screen.blit(score_gold, (WIDTH // 2 + 70, 60))
         screen.blit(stage_white, (WIDTH // 2 - 95, 120))
         screen.blit(stage_num, (WIDTH // 2 + 75, 120))
         screen.blit(player_title, (WIDTH // 2 - 260, 200))
+        screen.blit(total_score_text, (WIDTH // 2 - 80, 250))
 
-        enemy_icon = transform.scale(assets.enemy_icon_img, (36, 36))
-        row_y = [310, 410, 510, 610]
+        enemy_icon_normal = transform.scale(assets.enemy_icon_img, (36, 36))
+        enemy_icon_fast = transform.scale(assets.enemy_fast_tank_up_img, (36, 36))
 
-        for y in row_y:
-            left_zero = small_font.render("0", True, (255, 255, 255))
-            points = small_font.render("ОЧК", True, (255, 255, 255))
-            right_zero = small_font.render("0", True, (255, 255, 255))
+        row_y = [340, 440, 540, 640]
 
-            screen.blit(left_zero, (WIDTH // 2 - 170, y))
-            screen.blit(points, (WIDTH // 2 - 110, y))
-            screen.blit(right_zero, (WIDTH // 2 + 40, y))
+        normal_points = config.killed_normal * 100
+        fast_points = config.killed_fast * 200
 
-        screen.blit(enemy_icon, (WIDTH // 2 + 110, row_y[0] - 5))
-        screen.blit(enemy_icon, (WIDTH // 2 + 110, row_y[1] - 5))
-        screen.blit(enemy_icon, (WIDTH // 2 + 110, row_y[2] - 5))
-        screen.blit(enemy_icon, (WIDTH // 2 + 110, row_y[3] - 5))
+        rows = [
+            (normal_points, config.killed_normal, enemy_icon_normal),
+            (fast_points, config.killed_fast, enemy_icon_fast),
+            (0, 0, enemy_icon_normal),
+            (0, 0, enemy_icon_fast),
+        ]
 
-        draw.line(screen, (255, 255, 255), (WIDTH // 2 - 10, 705), (WIDTH // 2 + 220, 705), 4)
+        for i, (points_value, killed_value, icon_img) in enumerate(rows):
+            y = row_y[i]
 
-        total_text = big_font.render("ІТОГ 0", True, (255, 255, 255))
-        screen.blit(total_text, (WIDTH // 2 - 120, 730))
+            points_text = small_font.render(str(points_value), True, (255, 255, 255))
+            ochk_text = small_font.render("ОЧК", True, (255, 255, 255))
+            count_text = small_font.render(str(killed_value), True, (255, 255, 255))
+
+            screen.blit(points_text, (WIDTH // 2 - 170, y))
+            screen.blit(ochk_text, (WIDTH // 2 - 70, y))
+            screen.blit(count_text, (WIDTH // 2 + 70, y))
+            screen.blit(icon_img, (WIDTH // 2 + 120, y - 5))
+
+        draw.line(screen, (255, 255, 255), (WIDTH // 2 - 10, 735), (WIDTH // 2 + 220, 735), 4)
+
+        total_kills = config.killed_normal + config.killed_fast
+        total_text = big_font.render(f"ІТОГ {total_kills}", True, (255, 255, 255))
+        screen.blit(total_text, (WIDTH // 2 - 120, 760))
 
         if time.get_ticks() - config.game_over_start_time > 3500:
             config.game_state = "final_end"
@@ -217,16 +258,23 @@ while running:
     elif config.game_state == "final_end":
         screen.fill((0, 0, 0))
 
+        if not config.defeat_sound_played:
+            assets.defeat_sound.play()
+            config.defeat_sound_played = True
+
         end_img = assets.final_end_img
         img_x = WIDTH // 2 - end_img.get_width() // 2
         img_y = HEIGHT // 2 - end_img.get_height() // 2
         screen.blit(end_img, (img_x, img_y))
 
         if time.get_ticks() - config.game_over_start_time > 2500:
+            config.reset_stats()
             config.game_state = "menu"
             config.settings_mode = False
             config.player_spawned = False
             config.game_over = False
+            config.start_sound_played = False
+            config.defeat_sound_played = False
             menu_offset = HEIGHT
 
     for e in event.get():
@@ -257,6 +305,14 @@ while running:
                             config.player_spawned = False
                             config.game_over = False
                             config.enemy_spawned_count = 0
+                            config.enemy_spawn_time = time.get_ticks()
+                            config.enemy_remaining_count = 18
+                            config.player_lives = 3
+                            config.player_score = 0
+                            config.killed_normal = 0
+                            config.killed_fast = 0
+                            config.start_sound_played = False
+                            config.defeat_sound_played = False
                             level.init_level()
                             stage_start_time = time.get_ticks()
                         elif config.menu_selected == 1:

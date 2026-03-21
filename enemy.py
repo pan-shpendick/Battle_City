@@ -6,11 +6,13 @@ from bullet import Bullet
 
 
 class Enemy:
-    def __init__(self, x, y):
+    def __init__(self, x, y, fast=False):
         self.x = x
         self.y = y
+        self.fast = fast
+
         self.size = int(level.TILE * 0.75)
-        self.speed = 2
+        self.speed = 4 if fast else 2
         self.direction = "down"
         self.bullet = None
         self.is_alive = True
@@ -25,14 +27,24 @@ class Enemy:
         return pygame.Rect(self.x, self.y, self.size, self.size)
 
     def get_image(self):
-        if self.direction == "up":
-            img = assets.enemy_tank_up_img
-        elif self.direction == "right":
-            img = assets.enemy_tank_right_img
-        elif self.direction == "left":
-            img = assets.enemy_tank_left_img
+        if self.fast:
+            if self.direction == "up":
+                img = assets.enemy_fast_tank_up_img
+            elif self.direction == "right":
+                img = assets.enemy_fast_tank_right_img
+            elif self.direction == "left":
+                img = assets.enemy_fast_tank_left_img
+            else:
+                img = assets.enemy_fast_tank_down_img
         else:
-            img = assets.enemy_tank_down_img
+            if self.direction == "up":
+                img = assets.enemy_tank_up_img
+            elif self.direction == "right":
+                img = assets.enemy_tank_right_img
+            elif self.direction == "left":
+                img = assets.enemy_tank_left_img
+            else:
+                img = assets.enemy_tank_down_img
 
         return pygame.transform.scale(img, (self.size, self.size))
 
@@ -75,10 +87,8 @@ class Enemy:
 
         new_rect = pygame.Rect(new_x, new_y, self.size, self.size)
 
-        # столкновение с картой
         can_move = level.can_move_to(new_x, new_y, self.size, field_x, field_y)
 
-        # столкновение с другими врагами / игроком
         for rect in blocked_rects:
             if new_rect.colliderect(rect):
                 can_move = False
@@ -126,7 +136,7 @@ class Enemy:
         if not self.bullet or not self.bullet.is_alive:
             return None
 
-        hit, _, _ = self.bullet.move(field_x, field_y)
+        hit = self.bullet.move(field_x, field_y)
 
         if hit == "eagle":
             return "game_over"
@@ -134,6 +144,9 @@ class Enemy:
         if self.bullet and self.bullet.is_alive and self.bullet.get_rect().colliderect(player_rect):
             self.bullet.is_alive = False
             return "player_dead"
+
+        if self.bullet and not self.bullet.is_alive:
+            self.bullet = None
 
         return None
 
