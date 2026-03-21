@@ -5,9 +5,7 @@ import config
 TILE = 50
 SIDEBAR_W = 110
 
-# # - кирпич
-# S - сталь
-# . - пусто
+
 level_map = [
     "...................",
     ".##.##.##.##.##.##.",
@@ -33,7 +31,7 @@ FIELD_COLS = len(level_map[0])
 FIELD_W = FIELD_COLS * TILE
 FIELD_H = FIELD_ROWS * TILE
 
-# здоровье блоков
+
 brick_health = {}
 steel_health = {}
 
