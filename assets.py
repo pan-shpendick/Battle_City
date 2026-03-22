@@ -153,6 +153,8 @@ def load():
         os.path.join(IMAGE_DIR, "player_icon.png")
     ).convert_alpha()
 
+
+
     flag_img = pygame.image.load(
         os.path.join(IMAGE_DIR, "flag.png")
     ).convert_alpha()
