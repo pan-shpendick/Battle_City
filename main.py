@@ -38,26 +38,32 @@ def spawn_enemy(field_x, field_y, enemies, player1):
     possible_spawns = []
     top_row = 0
 
+    # проверяем каждую клетку сверху
     for col in range(level.FIELD_COLS):
         if level.level_map[top_row][col] == ".":
             x = field_x + col * level.TILE
             y = field_y
             possible_spawns.append((x, y))
 
-    random.shuffle(possible_spawns)
+    random.shuffle(possible_spawns) # проверяем каждую клетку сверху
 
+    # перемешиваем, чтобы было рандомно
     is_fast = config.enemy_spawned_count >= config.enemy_max_count - 2
 
+    # последние 2 танка — быстрые
     for x, y in possible_spawns:
         temp_enemy = enemy.Enemy(x, y, fast=is_fast)
         enemy_rect = temp_enemy.get_rect()
 
+        # пробуем заспавнить врага
         if not level.can_move_to(x, y, temp_enemy.size, field_x, field_y):
             continue
 
+        # если нельзя стоять — пропускаем
         if enemy_rect.colliderect(player1.get_rect()):
             continue
 
+        # если пересекается с игроком — пропускаем
         blocked = False
         for bot in enemies:
             if bot.is_alive and enemy_rect.colliderect(bot.get_rect()):
